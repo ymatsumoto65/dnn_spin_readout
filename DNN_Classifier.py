@@ -34,7 +34,7 @@ import time
 from tensorflow.keras.callbacks import LearningRateScheduler
 
 def step_decay(epoch):
-    x = 0.003
+    x = 0.001
     if epoch >= 200: x = 0.001
     if epoch >= 800: x = 0.0001
     return x
@@ -53,7 +53,7 @@ class DNN_classifier():
         ES type 2 : Faster computational time than type 1, Less training stability (overfitting)
         ES type 3 : For FPGA implementation using 'hls4ml'
         PSB type 1 : Stable training
-        PSB type 2 : Faster computational time than type 1, Less training stability (overfitting)
+        PSB type 2 : For FPGA implementation using 'hls4ml'
         '''
         
         if self.readout_type == 'ES':
@@ -83,8 +83,8 @@ class DNN_classifier():
                 self.model.add(BatchNormalization())
                 self.model.add(LeakyReLU(alpha =0.0))
                 self.model.add(Flatten())
-                self.model.add(Dense(200))
-                self.model.add(Dense(200))
+                self.model.add(Dense(100))
+                self.model.add(Dense(20))
                 if output_size ==2:
                     self.model.add(Dense(output_size,activation='sigmoid')) 
                 else:
@@ -182,7 +182,7 @@ class ES_data_augmenter():
     It is useful to correctly generalize the model to detect the blip signals.
     If you face overfitting preblems in the training precedure, we would recommend to use it. 
     '''
-    def __init__(self,readoutlength,exp_sig = None,offset_variation=False,mix_simdata = True,exp_noise= None,noise=0.5,signal_amp=1,tunnel_time=None,num_samples=20000):
+    def __init__(self,readoutlength,exp_sig = None,exp_noise= None,offset_variation=False,mix_simdata = True,noise=0.5,signal_amp=1,tunnel_time=None,num_samples=10000):
         if mix_simdata == True:
             t_rate=1/(readoutlength*1e-6/12)
             readoutlength = readoutlength
@@ -227,9 +227,12 @@ class ES_data_augmenter():
                     for k in range(reps):
                         exp_noise = np.append(exp_noise,exp_noise,axis=0)
                 xdataset = (xdataset+noise*scipy.stats.zscore(exp_noise)[:len(xdataset),:readoutlength])*signal_amp
-        if exp_sig is not None:
-            xdataset = np.append(xdataset,exp_sig,axis=0)
-            ydataset = np.append(ydataset,np.ones(len(exp_sig)))
+            if exp_sig is not None:
+                xdataset = np.append(xdataset,exp_sig,axis=0)
+                ydataset = np.append(ydataset,np.ones(len(exp_sig)))
+        else:
+            xdataset = np.append(exp_sig,exp_noise,axis=0)
+            ydataset = np.append(np.ones(len(exp_sig)),np.zeros(len(exp_noise)),axis=0)
         if offset_variation :
             xdataset2 = np.empty(0)
             ydataset2 = np.empty(0)
